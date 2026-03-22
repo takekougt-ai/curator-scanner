@@ -1,0 +1,1 @@
+# OLPHEUS Curator Scanner\n\nアルバム『Photograph』のプロモーション用自動ツール。\nGitHub Actionsで毎週月曜に実行されます。
