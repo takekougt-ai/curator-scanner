@@ -6,7 +6,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import polars as pl
 
-# 認証設定
 auth_manager = SpotifyClientCredentials(
     client_id=os.getenv('SPOTIPY_CLIENT_ID'),
     client_secret=os.getenv('SPOTIPY_CLIENT_SECRET')
@@ -16,15 +15,17 @@ sp = spotipy.Spotify(auth_manager=auth_manager)
 def search_curators(keywords, limit=50):
     curator_list = []
     seen_ids = set()
-    one_month_ago = datetime.now() - timedelta(days=30)
+    # 30日だと厳しすぎるので 90日（約3ヶ月）に拡大
+    active_period = datetime.now() - timedelta(days=90)
 
     for kw in keywords:
-        print(f"Searching: {kw}...")
+        print(f"--- Searching: {kw} ---")
         try:
             results = sp.search(q=kw, type='playlist', limit=limit)
-            if not results['playlists']['items']: continue
+            items = results['playlists']['items']
+            print(f"Found {len(items)} raw results for '{kw}'")
             
-            for playlist in results['playlists']['items']:
+            for playlist in items:
                 if not playlist or playlist['id'] in seen_ids: continue
                 
                 try:
@@ -33,9 +34,9 @@ def search_curators(keywords, limit=50):
                     
                     last_added = datetime.strptime(tracks['items'][0]['added_at'], '%Y-%m-%dT%H:%M:%SZ')
                     
-                    if last_added > one_month_ago:
+                    if last_added > active_period:
                         desc = playlist['description'] or ""
-                        sns_match = re.findall(r'@([\\w\\.]+)|ig:\\s*([\\w\\.]+)|twitter:\\s*([\\w\\.]+)', desc, re.IGNORECASE)
+                        sns_match = re.findall(r'@([\\\\w\\\\.]+)|ig:\\\\s*([\\\\w\\\\.]+)|twitter:\\\\s*([\\\\w\\\\.]+)', desc, re.IGNORECASE)
                         sns_handles = [item for sublist in sns_match for item in sublist if item]
                         
                         curator_list.append({
@@ -55,10 +56,15 @@ def search_curators(keywords, limit=50):
     return pl.DataFrame(curator_list)
 
 if __name__ == "__main__":
-    target_keywords = ['叙情系', 'Lyrical Hardcore', 'Osaka Hardcore', 'Melodic Hardcore Japan']
+    # キーワードをより広く、強力に設定
+    target_keywords = [
+        '叙情系', 'Lyrical Hardcore', 'Melodic Hardcore Japan', 
+        'Japanese Hardcore', 'Emotional Hardcore', 'Screamo Japan',
+        'envy band', 'waterweed', 'Crystal Lake fans' # 関連バンド名を入れるのがコツ
+    ]
     df = search_curators(target_keywords)
     if not df.is_empty():
         df.write_csv("curator_list.csv")
-        print(f"Successfully found {len(df)} active playlists.")
+        print(f"--- SUCCESS: Found {len(df)} active playlists! ---")
     else:
-        print("No active playlists found.")
+        print("--- NO RESULTS FOUND. Try broader keywords. ---")
