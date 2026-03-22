@@ -10,15 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # キャッシュの設定を削除してシンプルにしました
       - uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
 
       - name: Run Scanner
         env:
           SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
           SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
-        # ここを修正：uv run でライブラリを一時的に読み込んで実行
         run: |
           uv run --with spotipy --with polars python curator_search.py
 
