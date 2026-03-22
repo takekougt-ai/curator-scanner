@@ -1,21 +1,27 @@
 name: OLPHEUS Curator Scanner
+
 on:
   schedule:
     - cron: '0 0 * * 1'
   workflow_dispatch:
+
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
       - name: Run Scanner
         env:
           SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
           SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
+        # ここを修正：uv run でライブラリを一時的に読み込んで実行
         run: |
-          uv pip install spotipy polars --system
-          python curator_search.py
+          uv run --with spotipy --with polars python curator_search.py
+
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
